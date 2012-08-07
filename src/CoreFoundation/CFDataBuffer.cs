@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using MonoMac.CoreFoundation;
 
-namespace MonoMac.CFNetwork
+namespace MonoMac.CoreFoundation
 {
 	class CFDataBuffer : IDisposable
 	{

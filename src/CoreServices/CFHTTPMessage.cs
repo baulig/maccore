@@ -6,7 +6,7 @@ using MonoMac.Foundation;
 using MonoMac.CoreFoundation;
 using MonoMac.ObjCRuntime;
 
-namespace MonoMac.CFNetwork
+namespace MonoMac.CoreServices
 {
 	public class CFHTTPMessage : CFType, INativeObject, IDisposable {
 		internal IntPtr handle;

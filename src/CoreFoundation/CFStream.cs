@@ -29,7 +29,9 @@
 
 using System;
 using System.Net;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using MonoMac.CoreServices;
 using MonoMac.ObjCRuntime;
 using MonoMac.Foundation;
 
@@ -114,6 +116,18 @@ namespace MonoMac.CoreFoundation {
 		{
 			((CallbackDelegate) Marshal.GetDelegateForFunctionPointer (callback, typeof (CallbackDelegate))) (stream, eventType, info);
 		}
+	}
+
+	public enum CFStreamStatus
+	{
+		NotOpen = 0,
+		Opening,
+		Open,
+		Reading,
+		Writing,
+		AtEnd,
+		Closed,
+		Error
 	}
 
 	public abstract class CFStream : CFType, INativeObject, IDisposable

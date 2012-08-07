@@ -8,7 +8,7 @@ using MonoMac.CoreFoundation;
 using MonoMac.Foundation;
 using MonoMac.ObjCRuntime;
 
-namespace MonoMac.CFNetwork
+namespace MonoMac.CoreFoundation
 {
 	public class CFReadStream : CFStream
 	{

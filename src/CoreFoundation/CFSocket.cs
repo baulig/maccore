@@ -5,8 +5,179 @@ using System.Runtime.InteropServices;
 using MonoMac.CoreFoundation;
 using MonoMac.ObjCRuntime;
 
-namespace MonoMac.CFNetwork
+namespace MonoMac.CoreFoundation
 {
+	[Flags]
+	public enum CFSocketCallBackType
+	{
+		NoCallBack = 0,
+		ReadCallBack = 1,
+		AcceptCallBack = 2,
+		DataCallBack = 3,
+		ConnectCallBack = 4,
+		WriteCallBack = 8
+	}
+
+	public enum CFSocketError
+	{
+		Success = 0,
+		Error = -1,
+		Timeout = -2
+	}
+
+	[Flags]
+	public enum CFSocketFlags
+	{
+		AutomaticallyReenableReadCallBack = 1,
+		AutomaticallyReenableAcceptCallBack = 2,
+		AutomaticallyReenableDataCallBack = 3,
+		AutomaticallyReenableWriteCallBack = 8,
+		LeaveErrors = 64,
+		CloseOnInvalidate = 128
+	}
+
+	public struct CFSocketNativeHandle
+	{
+		internal readonly int handle;
+
+		internal CFSocketNativeHandle (int handle)
+		{
+			this.handle = handle;
+		}
+
+		public override string ToString ()
+		{
+			return string.Format ("[CFSocketNativeHandle {0}]", handle);
+		}
+	}
+
+	public class CFSocketException : Exception
+	{
+		public CFSocketError Error {
+			get;
+			private set;
+		}
+
+		public CFSocketException (CFSocketError error)
+		{
+			this.Error = error;
+		}
+	}
+
+	struct CFSocketSignature
+	{
+		int protocolFamily;
+		int socketType;
+		int protocol;
+		IntPtr address;
+
+		public CFSocketSignature (AddressFamily family, SocketType type, ProtocolType proto,
+		                          CFSocketAddress address)
+		{
+			this.protocolFamily = AddressFamilyToInt (family);
+			this.socketType = SocketTypeToInt (type);
+			this.protocol = ProtocolToInt (proto);
+			this.address = address.Handle;
+		}
+
+		internal static int AddressFamilyToInt (AddressFamily family)
+		{
+			switch (family) {
+			case AddressFamily.Unspecified:
+				return 0;
+			case AddressFamily.Unix:
+				return 1;
+			case AddressFamily.InterNetwork:
+				return 2;
+			case AddressFamily.AppleTalk:
+				return 16;
+			case AddressFamily.InterNetworkV6:
+				return 30;
+			default:
+				throw new ArgumentException ();
+			}
+		}
+
+		internal static int SocketTypeToInt (SocketType type)
+		{
+			if ((int) type == 0)
+				return 0;
+
+			switch (type) {
+			case SocketType.Unknown:
+				return 0;
+			case SocketType.Stream:
+				return 1;
+			case SocketType.Dgram:
+				return 2;
+			case SocketType.Raw:
+				return 3;
+			case SocketType.Rdm:
+				return 4;
+			case SocketType.Seqpacket:
+				return 5;
+			default:
+				throw new ArgumentException ();
+			}
+		}
+
+		internal static int ProtocolToInt (ProtocolType type)
+		{
+			return (int) type;
+		}
+
+	}
+
+	class CFSocketAddress : CFDataBuffer
+	{
+		public CFSocketAddress (IPEndPoint endpoint)
+			: base (CreateData (endpoint))
+		{
+		}
+
+		internal static IPEndPoint EndPointFromAddressPtr (IntPtr address)
+		{
+			using (var buffer = new CFDataBuffer (address)) {
+				if (buffer [1] == 30) { // AF_INET6
+					int port = (buffer [2] << 8) + buffer [3];
+					var bytes = new byte [16];
+					Buffer.BlockCopy (buffer.Data, 8, bytes, 0, 16);
+					return new IPEndPoint (new IPAddress (bytes), port);
+				} else if (buffer [1] == 2) { // AF_INET
+					int port = (buffer [2] << 8) + buffer [3];
+					var bytes = new byte [4];
+					Buffer.BlockCopy (buffer.Data, 4, bytes, 0, 4);
+					return new IPEndPoint (new IPAddress (bytes), port);
+				} else {
+					throw new ArgumentException ();
+				}
+			}
+		}
+
+		static byte[] CreateData (IPEndPoint endpoint)
+		{
+			if (endpoint.AddressFamily == AddressFamily.InterNetwork) {
+				var buffer = new byte [16];
+				buffer [0] = 16;
+				buffer [1] = 2; // AF_INET
+				buffer [2] = (byte)(endpoint.Port >> 8);
+				buffer [3] = (byte)(endpoint.Port & 0xff);
+				Buffer.BlockCopy (endpoint.Address.GetAddressBytes (), 0, buffer, 4, 4);
+				return buffer;
+			} else if (endpoint.AddressFamily == AddressFamily.InterNetworkV6) {
+				var buffer = new byte [28];
+				buffer [0] = 32;
+				buffer [1] = 30; // AF_INET6
+				buffer [2] = (byte)(endpoint.Port >> 8);
+				buffer [3] = (byte)(endpoint.Port & 0xff);
+				Buffer.BlockCopy (endpoint.Address.GetAddressBytes (), 0, buffer, 8, 16);
+				return buffer;
+			} else {
+				throw new ArgumentException ();
+			}
+		}
+	}
+
 	public class CFSocket : CFType, INativeObject, IDisposable
 	{
 		IntPtr handle;

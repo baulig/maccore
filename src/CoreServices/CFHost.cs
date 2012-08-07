@@ -5,7 +5,7 @@ using MonoMac.CoreFoundation;
 using MonoMac.Foundation;
 using MonoMac.ObjCRuntime;
 
-namespace MonoMac.CFNetwork {	
+namespace MonoMac.CoreServices {	
 	class CFHost : INativeObject, IDisposable {
 		internal IntPtr handle;
 
