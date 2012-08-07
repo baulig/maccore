@@ -3,6 +3,7 @@
 //
 // Authors:
 //    Miguel de Icaza (miguel@novell.com)
+//    Martin Baulig (martin.baulig@gmail.com)
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
