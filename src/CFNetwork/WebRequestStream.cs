@@ -33,6 +33,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using MonoMac.CoreFoundation;
+using MonoMac.CoreServices;
 using MonoMac.Foundation;
 
 namespace MonoMac.CFNetwork
