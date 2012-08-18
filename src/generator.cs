@@ -499,6 +499,9 @@ public class DefaultValueFromArgumentAttribute : Attribute {
 	public string Argument { get; set; }
 }
 
+public class NoDefaultImplementationAttribute : Attribute {
+}
+
 // Apply to strings parameters that are merely retained or assigned,
 // not copied this is an exception as it is advised in the coding
 // standard for Objective-C to avoid this, but a few properties do use
@@ -1513,7 +1516,7 @@ public class Generator {
 						if (mi.DeclaringType == t)
 							need_abstract [t] = true;
 						continue;
-					} else if (attr is SealedAttribute || attr is EventArgsAttribute || attr is DelegateNameAttribute || attr is EventNameAttribute || attr is DefaultValueAttribute || attr is ObsoleteAttribute || attr is AlphaAttribute || attr is DefaultValueFromArgumentAttribute || attr is NewAttribute || attr is SinceAttribute || attr is PostGetAttribute || attr is NullAllowedAttribute || attr is CheckDisposedAttribute || attr is SnippetAttribute || attr is LionAttribute || attr is AppearanceAttribute || attr is ThreadSafeAttribute || attr is AutoreleaseAttribute)
+					} else if (attr is SealedAttribute || attr is EventArgsAttribute || attr is DelegateNameAttribute || attr is EventNameAttribute || attr is DefaultValueAttribute || attr is ObsoleteAttribute || attr is AlphaAttribute || attr is DefaultValueFromArgumentAttribute || attr is NoDefaultImplementationAttribute || attr is NewAttribute || attr is SinceAttribute || attr is PostGetAttribute || attr is NullAllowedAttribute || attr is CheckDisposedAttribute || attr is SnippetAttribute || attr is LionAttribute || attr is AppearanceAttribute || attr is ThreadSafeAttribute || attr is AutoreleaseAttribute)
 						continue;
 					else 
 						throw new BindingException (1007, true, "Unknown attribute {0} on {1}", attr.GetType (), t);
@@ -2941,6 +2944,8 @@ public class Generator {
 					print ("}");
 					print ("return (_{0}) del;", dtype.Name);
 					indent--; print ("}\n");
+
+					var noDefaultImplementation = new List<MethodInfo> ();
 					
 					print ("[Register]");
 					print ("class _{0} : {1} {{ ", dtype.Name, RenderType (dtype));
@@ -2962,6 +2967,11 @@ public class Generator {
 						
 						var pars = mi.GetParameters ();
 						int minPars = bta.Singleton ? 0 : 1;
+
+#if MONOMAC
+						if (mi.GetCustomAttributes (typeof (NoDefaultImplementationAttribute), false).Length > 0)
+							noDefaultImplementation.Add (mi);
+#endif
 
 						if (pars.Length < minPars)
 							throw new BindingException (1003, true, "The delegate method {0}.{1} needs to take at least one parameter", dtype.FullName, mi.Name);
@@ -3061,6 +3071,34 @@ public class Generator {
 						indent--;
 						print ("}\n");
 					}
+
+#if MONOMAC
+					if (noDefaultImplementation.Count > 0) {
+						foreach (var mi in noDefaultImplementation) {
+							var eattrs = mi.GetCustomAttributes (typeof (ExportAttribute), false);
+							var export = (ExportAttribute)eattrs[0];
+							print ("static IntPtr sel{0} = Selector.GetHandle (\"{1}\");", mi.Name, export.Selector);
+						}
+						print ("static IntPtr selRespondsToSelector = Selector.GetHandle (\"respondsToSelector:\");");
+
+						print ("[Export (\"respondsToSelector:\")]");
+						print ("bool _RespondsToSelector (Selector sel)");
+						print ("{");
+						++indent;
+						foreach (var mi in noDefaultImplementation) {
+							var eattrs = mi.GetCustomAttributes (typeof (ExportAttribute), false);
+							var export = (ExportAttribute)eattrs[0];
+							print ("if (sel.Handle.Equals (sel{0}))", mi.Name);
+							++indent;
+							print ("return {0} != null;", PascalCase (mi.Name));
+							--indent;
+						}
+						print ("return Messaging.bool_objc_msgSendSuper_intptr (SuperHandle, selRespondsToSelector, sel.Handle);");
+						--indent;
+						print ("}");
+					}
+#endif
+
 					indent--;
 					print ("}");
 				}
