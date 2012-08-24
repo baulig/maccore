@@ -3082,18 +3082,18 @@ public class Generator {
 						print ("static IntPtr selRespondsToSelector = Selector.GetHandle (\"respondsToSelector:\");");
 
 						print ("[Export (\"respondsToSelector:\")]");
-						print ("bool _RespondsToSelector (Selector sel)");
+						print ("bool _RespondsToSelector (IntPtr selHandle)");
 						print ("{");
 						++indent;
 						foreach (var mi in noDefaultImplementation) {
 							var eattrs = mi.GetCustomAttributes (typeof (ExportAttribute), false);
 							var export = (ExportAttribute)eattrs[0];
-							print ("if (sel.Handle.Equals (sel{0}))", mi.Name);
+							print ("if (selHandle.Equals (sel{0}))", mi.Name);
 							++indent;
 							print ("return {0} != null;", PascalCase (mi.Name));
 							--indent;
 						}
-						print ("return Messaging.bool_objc_msgSendSuper_intptr (SuperHandle, selRespondsToSelector, sel.Handle);");
+						print ("return Messaging.bool_objc_msgSendSuper_intptr (SuperHandle, selRespondsToSelector, selHandle);");
 						--indent;
 						print ("}");
 					}
